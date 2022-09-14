@@ -3,6 +3,13 @@
   "version": "0.0.0",
   "description": "A GitHub action to manage self-hosted runners",
   "private": true,
+  "scripts": {
+    "psf": "run-script-os",
+    "psf:windows": "./scripts/format.ps1",
+    "psf:nix": "npm run psf:skip",
+    "psf:default": "npm run psf:skip",
+    "psf:skip": "echo '>> INFO   :: psf command skipped.'"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/morajlab/github-self-runner-action.git"
@@ -32,13 +39,15 @@
     "lint-staged": "^13.0.3",
     "nx": "14.5.10",
     "prettier": "^2.6.2",
+    "run-script-os": "^1.1.6",
     "typescript": "~4.7.2"
   },
   "workspaces": [
     "packages/**"
   ],
   "lint-staged": {
-    "**/*": "prettier -w -u"
+    "**/*": "prettier -w -u",
+    "**/*.ps1": "npm run psf"
   },
   "license": "MIT",
   "bugs": {
