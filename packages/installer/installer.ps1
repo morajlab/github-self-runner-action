@@ -1,25 +1,52 @@
-function Get-MD5Hash($string) {
+function Get-MD5Hash {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]
+        $StringContent
+    )
+
     $md5 = New-Object -TypeName System.Security.Cryptography.MD5CryptoServiceProvider;
     $utf8 = New-Object -TypeName System.Text.UTF8Encoding;
-    $hash = [System.BitConverter]::ToString($md5.ComputeHash($utf8.GetBytes($string)))
+    $hash = [System.BitConverter]::ToString($md5.ComputeHash($utf8.GetBytes($StringContent)))
 
     return $hash;
 }
 
-function Run_PWSH($command) {
-    pwsh -NoLogo -STA -NonInteractive -NoProfile -ExecutionPolicy Unrestricted -Command $command
+function Invoke-PWSH {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]
+        $Command
+    )
+
+    pwsh -NoLogo -STA -NonInteractive -NoProfile -ExecutionPolicy Unrestricted -Command $Command
 }
 
-function Check_Program_Installed($programName) {
-    $x86_check = ((Get-ChildItem "HKLM:Software\Microsoft\Windows\CurrentVersion\Uninstall") |
-            Where-Object { $_.Name -like "*$programName*" }).Length -gt 0;
+function Find-Program {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]
+        $ProgramName
+    )
 
-    if (Test-Path 'HKLM:Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall') {
-        $x64_check = ((Get-ChildItem "HKLM:Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall") |
-                Where-Object { $_."Name" -like "*$programName*" } ).Length -gt 0;
+    [string[]]$registry_paths = "HKLM:Software\Microsoft\Windows\CurrentVersion\Uninstall", 
+    "HKLM:Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall";
+
+    foreach ($path in $registry_paths) {
+        if (Test-Path $path) {
+            $result = ((Get-ChildItem $path) |
+                Where-Object { $_.Name -like "*$ProgramName*" }).Length -gt 0;
+
+            if ($result) {
+                return $true;
+            }
+        }
     }
 
-    return $x86_check -or $x64_check;
+    return $false;
 }
 
 function Install-Vagrant {
@@ -36,24 +63,23 @@ function Install-Runner {
 
         $request_uri = "https://api.github.com/repos/actions/runner/releases?per_page=1";
         $request_headers = @{
-            "Accept" = "application/vnd.github+json";
+            "Accept"      = "application/vnd.github+json";
             "ContentType" = "application/json";
         };
         $request_asset_object = ((Invoke-WebRequest -Uri $request_uri -Headers $request_headers).Content |
-                ConvertFrom-Json).assets |
-                Where-Object { $_.name -like "*-win-x64-*" -and $_.name -notlike "*noexternals*" `
+            ConvertFrom-Json).assets |
+        Where-Object { $_.name -like "*-win-x64-*" -and $_.name -notlike "*noexternals*" `
                 -and $_.name -notlike "*noruntime*" -and $_.name -notlike "*trimmedpackages*" } |
-                Select-Object -Property "browser_download_url", "name";
+        Select-Object -Property "browser_download_url", "name";
 
         Invoke-WebRequest -Uri $request_asset_object.browser_download_url -OutFile $request_asset_object.name;
         Add-Type -AssemblyName System.IO.Compression.FileSystem;
         [System.IO.Compression.ZipFile]::ExtractToDirectory((Join-Path "$PWD" $request_asset_object.name), "$PWD");
     }
 
-    Run_PWSH($command);
+    Invoke-PWSH -Command $command
 }
 
-if (-Not (Check_Program_Installed("vagrant"))) {
+if (-Not (Find-Program -ProgramName "vagrant")) {
     Install-Vagrant
 }
-
