@@ -1,0 +1,22 @@
+name: 'github-self-runner-action'
+description: 'A GitHub action to manage self-hosted runners'
+runs:
+  using: 'composite'
+  steps:
+    - run: |
+        function ConvertFrom-JSONString {
+          param(
+            [Parameter(Mandatory = $true)]
+            [string]
+            $JSONString
+          )
+
+          return (ConvertFrom-Json $JSONString)
+        }
+        $properties = @{
+          RunnerContext = (ConvertFrom-JSONString '${{ toJSON(runner) }}');
+          GitHubContext = (ConvertFrom-JSONString '${{ toJSON(github) }}');
+        };
+        New-Object pscustomobject -Property $properties |
+        packages/provisioner/provisioner.ps1;
+      shell: pwsh
