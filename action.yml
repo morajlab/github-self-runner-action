@@ -17,6 +17,7 @@ runs:
           RunnerContext = (ConvertFrom-JSONString '${{ toJSON(runner) }}');
           GitHubContext = (ConvertFrom-JSONString '${{ toJSON(github) }}');
         };
+        Install-Module -Name "powershell-yaml" -Force | Out-Null
         New-Object pscustomobject -Property $properties |
         packages/provisioner/provisioner.ps1;
       shell: pwsh

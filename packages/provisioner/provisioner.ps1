@@ -9,6 +9,8 @@ param (
 )
 
 process {
+  Import-Module powershell-yaml
+
   function Invoke-GHWebRequest {
     [CmdletBinding()]
     param (
@@ -83,16 +85,25 @@ process {
     )
 
     $request_uri = "https://api.github.com/repos/${Repo}/actions/runs/${RunID}";
-    $path = (Invoke-GHWebRequest -URI $request_uri -Token $Token).ContentObject.path;
+    $workflow_metadata = (Invoke-GHWebRequest -URI $request_uri -Token $Token).ContentObject;
+    $path = $workflow_metadata.path;
 
     if ($Ref -ne $null -and $Ref -ne '') {
       $path += "?ref=${Ref}";
     }
 
-    $content = Get-GHFileContent -Repo $Repo -Token $Token -Path $path;
+    $content = ConvertFrom-Yaml (Get-GHFileContent -Repo $Repo -Token $Token -Path $path);
     
-    return $content;
+    return @{
+      Metadata = $workflow_metadata;
+      Content  = $content;
+    };
   }
 
-  Write-Host (Get-GHWorkflowContent -RunID $_.GitHubContext.run_id -Repo $_.GitHubContext.repository -Ref $_.GitHubContext.ref);
+  $jobs_url = (Get-GHWorkflowContent -RunID $_.GitHubContext.run_id `
+      -Repo $_.GitHubContext.repository -Ref $_.GitHubContext.ref).Metadata.jobs_url;
+  
+  (Invoke-GHWebRequest -URI $jobs_url).ContentObject.jobs | ForEach-Object {
+    $_
+  };
 }
