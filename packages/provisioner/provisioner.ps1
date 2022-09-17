@@ -100,6 +100,12 @@ process {
     };
   }
 
+  function Install-VagrantVM {
+    # TODO: Install GitHub-hosted VMs
+    vagrant init gusztavvargadr/windows-server
+    vagrant up
+  }
+
   function Invoke-GHJob {
     [CmdletBinding()]
     param (
