@@ -12,5 +12,6 @@
         "cacheableOperations": ["build", "lint", "test", "e2e"]
       }
     }
-  }
+  },
+  "plugins": ["@jnxplus/nx-boot-gradle"]
 }
